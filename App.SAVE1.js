@@ -35,7 +35,9 @@ class App extends Component {
     }
 
     componentWillUnmount() {
-        NfcManager.stop();
+        if (this._stateChangedSubscription) {
+            this._stateChangedSubscription.remove();
+        }
     }
 
     render() {
@@ -60,12 +62,7 @@ class App extends Component {
                         <Text>Clear</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={{ marginTop: 20 }}
-                        onPress={() => console.warn('test test test')}>
-                        <Text>Test</Text>
-                    </TouchableOpacity>
-
-                    <View style={{ marginTop: 50 }}>
+                    <View>
                       <Text>
                         {`skuUid: ${skuUid}`}
                       </Text>
@@ -80,7 +77,7 @@ class App extends Component {
         NfcManager.start({
             onSessionClosedIOS: () => {
                 console.log('ios session closed');
-            },
+            }
         })
             .then(result => {
                 console.log('start OK', result);
@@ -88,16 +85,47 @@ class App extends Component {
             .catch(error => {
                 console.warn('start fail', error);
                 this.setState({supported: false});
-            });
+            })
 
         if (Platform.OS === 'android') {
+            NfcManager.getLaunchTagEvent()
+                .then(tag => {
+                    console.log('launch tag', tag);
+                    if (tag) {
+                        this.setState({ tag });
+                    }
+                })
+                .catch(err => {
+                    console.log(err);
+                })
             NfcManager.isEnabled()
                 .then(enabled => {
                     this.setState({ enabled });
                 })
                 .catch(err => {
                     console.log(err);
-                });
+                })
+            NfcManager.onStateChanged(
+                event => {
+                    if (event.state === 'on') {
+                        this.setState({enabled: true});
+                    } else if (event.state === 'off') {
+                        this.setState({enabled: false});
+                    } else if (event.state === 'turning_on') {
+                        // do whatever you want
+                    } else if (event.state === 'turning_off') {
+                        // do whatever you want
+                    }
+                }
+            )
+                .then(sub => {
+                    this._stateChangedSubscription = sub;
+                    // remember to call this._stateChangedSubscription.remove()
+                    // when you don't want to listen to this anymore
+                })
+                .catch(err => {
+                    console.warn(err);
+                })
         }
     }
 
@@ -122,7 +150,6 @@ class App extends Component {
     }
 
     _startDetection = () => {
-console.warn('--- _startDetection')
         NfcManager.registerTagEvent(this._onTagDiscovered)
             .then(result => {
                 console.log('registerTagEvent OK', result)
@@ -133,7 +160,6 @@ console.warn('--- _startDetection')
     }
 
     _stopDetection = () => {
-console.warn('--- _stopDetection')
         NfcManager.unregisterTagEvent()
             .then(result => {
                 console.log('unregisterTagEvent OK', result)

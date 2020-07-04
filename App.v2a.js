@@ -13,9 +13,8 @@ class App extends React.Component {
       console.log('NfcEvents.DiscoverTag')
       console.warn('tag', tag);
       NfcManager.setAlertMessageIOS('I got your tag!');
-      //NfcManager.unregisterTagEvent().catch(() => 0);
+      NfcManager.unregisterTagEvent().catch(() => 0);
     });
-    this._listen();
   }
 
   componentWillUnmount() {
@@ -29,16 +28,16 @@ class App extends React.Component {
         <Text>NFC Demo</Text>
         <TouchableOpacity
           style={{padding: 10, width: 200, margin: 20, borderWidth: 1, borderColor: 'black'}}
-          onPress={this._listen}
+          onPress={this._test}
         >
-          <Text>Listen</Text>
+          <Text>Test</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={{padding: 10, width: 200, margin: 20, borderWidth: 1, borderColor: 'black'}}
           onPress={this._cancel}
         >
-          <Text>Cancel listening</Text>
+          <Text>Cancel Test</Text>
         </TouchableOpacity>
       </View>
     )
@@ -48,7 +47,7 @@ class App extends React.Component {
     NfcManager.unregisterTagEvent().catch(() => 0);
   }
 
-  _listen = async () => {
+  _test = async () => {
     try {
       //await NfcManager.registerTagEvent({alertMessage: 'my message', readerModeFlags: NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS});
       await NfcManager.registerTagEvent();

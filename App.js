@@ -1,147 +1,61 @@
-import React, { Component } from 'react';
+import React from 'react'
 import {
-    View,
-    Text,
-    Platform,
-    TouchableOpacity,
-    ScrollView,
-} from 'react-native';
-import NfcManager from 'react-native-nfc-manager';
+  View, Text, TouchableOpacity
+} from 'react-native'
+import NfcManager, {NfcEvents, NfcAdapter} from 'react-native-nfc-manager';
 
-class App extends Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            supported: true,
-            enabled: false,
-            tag: {},
-            skuUid: '----------------',
-        };
+class App extends React.Component {
+  componentDidMount() {
+    console.log('NfcManager.start()')
+    NfcManager.start();
+    console.log('NfcManager.setEventListener()')
+    NfcManager.setEventListener(NfcEvents.DiscoverTag, tag => {
+      console.log('NfcEvents.DiscoverTag')
+      console.warn('tag', tag);
+      NfcManager.setAlertMessageIOS('I got your tag!');
+      NfcManager.unregisterTagEvent().catch(() => 0);
+    });
+  }
+
+  componentWillUnmount() {
+    NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
+    NfcManager.unregisterTagEvent().catch(() => 0);
+  }
+
+  render() {
+    return (
+      <View style={{padding: 20}}>
+        <Text>NFC Demo</Text>
+        <TouchableOpacity
+          style={{padding: 10, width: 200, margin: 20, borderWidth: 1, borderColor: 'black'}}
+          onPress={this._test}
+        >
+          <Text>Test</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={{padding: 10, width: 200, margin: 20, borderWidth: 1, borderColor: 'black'}}
+          onPress={this._cancel}
+        >
+          <Text>Cancel Test</Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
+  _cancel = () => {
+    NfcManager.unregisterTagEvent().catch(() => 0);
+  }
+
+  _test = async () => {
+    try {
+      //await NfcManager.registerTagEvent({alertMessage: 'my message', readerModeFlags: NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS});
+      await NfcManager.registerTagEvent();
+    } catch (ex) {
+      console.warn('ex', ex);
+      NfcManager.unregisterTagEvent().catch(() => 0);
     }
-
-    componentDidMount() {
-        NfcManager.isSupported()
-            .then(supported => {
-                this.setState({ supported });
-                if (supported) {
-                    this._startNfc();
-                    this._startDetection();
-                }
-            })
-            .catch(error => {
-                    console.warn('device does not support nfc!');
-                    this.setState({supported: false});
-                });
-    }
-
-    componentWillUnmount() {
-        NfcManager.stop();
-    }
-
-    render() {
-        let { supported, enabled, skuUid } = this.state;
-        return (
-            <ScrollView style={{flex: 1}}>
-                { Platform.OS === 'ios' && <View style={{ height: 60 }} /> }
-
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <Text>{`Is NFC supported ? ${supported}`}</Text>
-                    <Text>{`Is NFC enabled (Android only)? ${enabled}`}</Text>
-
-                    <TouchableOpacity style={{ marginTop: 20 }} onPress={this._startDetection}>
-                        <Text style={{ color: 'blue' }}>Start Tag Detection</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={{ marginTop: 20 }} onPress={this._stopDetection}>
-                        <Text style={{ color: 'red' }}>Stop Tag Detection</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={{ marginTop: 20 }} onPress={this._clearMessages}>
-                        <Text>Clear</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={{ marginTop: 20 }}
-                        onPress={() => console.warn('test test test')}>
-                        <Text>Test</Text>
-                    </TouchableOpacity>
-
-                    <View style={{ marginTop: 50 }}>
-                      <Text>
-                        {`skuUid: ${skuUid}`}
-                      </Text>
-                    </View>
-
-                </View>
-            </ScrollView>
-        )
-    }
-
-    _startNfc() {
-        NfcManager.start({
-            onSessionClosedIOS: () => {
-                console.log('ios session closed');
-            },
-        })
-            .then(result => {
-                console.log('start OK', result);
-            })
-            .catch(error => {
-                console.warn('start fail', error);
-                this.setState({supported: false});
-            });
-
-        if (Platform.OS === 'android') {
-            NfcManager.isEnabled()
-                .then(enabled => {
-                    this.setState({ enabled });
-                })
-                .catch(err => {
-                    console.log(err);
-                });
-        }
-    }
-
-    _onTagDiscovered = tag => {
-        console.log('--Tag Discovered:', tag);
-        console.log('tag.ndefMessage[0].payload:', tag.ndefMessage[0].payload);
-
-        let bytesToStr = bytes => bytes.reduce((acc, byte) => acc + String.fromCharCode(byte), '');
-
-        if (tag &&
-          tag.ndefMessage &&
-          tag.ndefMessage.length > 0 &&
-          tag.ndefMessage[0].payload) {
-          let uuid = bytesToStr(tag.ndefMessage[0].payload);
-          this.setState({skuUid: uuid});
-          console.log('uuid:', uuid);
-        } else {
-          console.log('uuid:', 'NONE');
-          this.setState({skuUid: 'NONE'});
-          return;
-        }
-    }
-
-    _startDetection = () => {
-console.warn('--- _startDetection')
-        NfcManager.registerTagEvent(this._onTagDiscovered)
-            .then(result => {
-                console.log('registerTagEvent OK', result)
-            })
-            .catch(error => {
-                console.warn('registerTagEvent fail', error)
-            })
-    }
-
-    _stopDetection = () => {
-console.warn('--- _stopDetection')
-        NfcManager.unregisterTagEvent()
-            .then(result => {
-                console.log('unregisterTagEvent OK', result)
-            })
-            .catch(error => {
-                console.warn('unregisterTagEvent fail', error)
-            })
-    }
+  }
 }
 
-export default App;
+export default App
